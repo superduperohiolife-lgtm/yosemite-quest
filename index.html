@@ -96,6 +96,11 @@ h1.title{text-align:center;font-size:30px;line-height:1.25;margin:22px 0 4px;col
 .rankrow .sc{color:#ffe08a;font-weight:bold;}
 .rankrow .tt{font-size:11px;color:#9db4ff;}
 .rankrow.me{background:#122a6e;border-radius:6px;}
+.rankrow .tt .rdate{color:#7e93d0;font-size:10px;}
+.rtabs{display:flex;gap:6px;margin:8px 0 4px;}
+.rtab{flex:1;background:var(--win2);color:#cfe0ff;border:2px solid var(--ink);border-radius:7px;font:inherit;font-size:13px;font-weight:bold;padding:8px 4px;cursor:pointer;}
+.rtab.on{background:var(--gold);color:#04102e;border-color:#04102e;}
+.rtab:active{transform:translateY(1px);}
 .notice{font-size:12px;color:#9db4ff;text-align:center;margin:8px 0;}
 .online{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--ng);margin-right:5px;vertical-align:middle;}
 .online.on{background:var(--ok);}
@@ -179,7 +184,12 @@ h1.title{text-align:center;font-size:30px;line-height:1.25;margin:22px 0 4px;col
   <!-- ===== ランキング ===== -->
   <section id="scRank" class="screen">
     <div class="win gold">
-      <p class="center" style="font-size:20px;color:var(--gold);margin:2px">★ ランキング ★</p>
+      <p class="center" style="font-size:20px;color:var(--gold);margin:2px">★ ランキング Top20 ★</p>
+      <div class="rtabs" id="rankTabs">
+        <button class="rtab" data-p="day">デイリー</button>
+        <button class="rtab" data-p="week">ウィークリー</button>
+        <button class="rtab on" data-p="all">総合</button>
+      </div>
       <p class="notice" id="rankNet"></p>
       <div id="rankList"></div>
     </div>
@@ -284,13 +294,14 @@ function renderResultTitle(maxScore){
 }
 
 /* ---------- 状態 ---------- */
-/* 20問＝4ステップ×5問。各ステップの正答率でレベルを見直す（非表示）
-   ・ステップ1は必ずレベル1
-   ・正答率が高い(=3/5以上)→レベルを1つ上げる（1→2→3→3 上限3）
-   ・正答率が低い→現状維持（下げない）              */
+/* 20問＝4ステップ×5問。難易度カーブ（非表示）
+   ・前半(1〜10問=ステップ1,2)は全員レベル1（やさしい割合を多く）
+   ・後半で「高正答(4/5以上)」の人だけが上がる：ステップ3で最大Lv2、ステップ4で最大Lv3
+   ・つまり平均以下はずっとLv1、ハイスコアの人だけ どんどん難化。下げはしない
+   ・レベル上限 = 入るステップに応じて 1→1→2→3（LEVEL_CAP） */
 const STEP_SIZE=5;                  // 1ステップの問題数
 const TOTAL_Q=20;                   // 全問題数
-const ADVANCE_ACC=0.6;              // これ以上でレベルアップ（5問中3問）
+const ADVANCE_ACC=0.8;              // これ以上でレベルアップ（5問中4問以上＝高正答者のみ）
 const CHOICE_BY_LV={1:5,2:6,3:7};
 let state=null, player=null;
 
@@ -299,8 +310,20 @@ const LS={
   getBest:p=>+(localStorage.getItem("yq_best_"+p)||0),
   setBest:(p,v)=>localStorage.setItem("yq_best_"+p,String(v)),
   getPending:()=>{try{return JSON.parse(localStorage.getItem("yq_pending")||"[]")}catch(e){return[]}},
-  setPending:a=>localStorage.setItem("yq_pending",JSON.stringify(a))
+  setPending:a=>localStorage.setItem("yq_pending",JSON.stringify(a)),
+  getHist:()=>{try{return JSON.parse(localStorage.getItem("yq_hist")||"[]")}catch(e){return[]}},   // 直近プレイ履歴（Top20/オフライン用）
+  setHist:a=>localStorage.setItem("yq_hist",JSON.stringify(a))
 };
+/* プレイ結果を端末履歴に追加（最新60件を保持） */
+function pushHist(rec){ let a=LS.getHist(); a.push({player:rec.player,score:rec.score,title:rec.title,accuracy:rec.accuracy,level:rec.level,ts:rec.ts,date:rec.date}); a=a.filter(function(x){return x&&x.player;}).slice(-60); LS.setHist(a); }
+/* 期間フィルタした端末内Top（オフライン/フォールバック用） */
+function localTop(period,n){
+  const now=Date.now(), win = period==="day"?864e5 : period==="week"?6048e5 : null;
+  let arr=LS.getHist().concat(LS.getPending().map(function(r){return {player:r.player,score:r.score,title:r.title,ts:r.ts,date:r.date,pending:true};}));
+  if(win!=null) arr=arr.filter(function(r){ const t=Date.parse(r.ts); return !isNaN(t) && (now-t)<=win; });
+  arr.sort(function(a,b){return (Number(b.score)||0)-(Number(a.score)||0);});
+  return arr.slice(0,n||20);
+}
 function pushPending(rec){ let a=LS.getPending(); a.push(rec); a.sort((x,y)=>y.score-x.score); a=a.slice(0,5); LS.setPending(a); }
 
 /* ---------- 効果音（WebAudio・冒険風） ---------- */
@@ -398,7 +421,7 @@ window.addEventListener("online",flushPending);
 
 /* ---------- ランキング通信（GAS Web App） ---------- */
 async function postScore(rec){ if(!online()) throw new Error("offline"); const res=await fetch(RANKING_ENDPOINT,{method:"POST",body:JSON.stringify({action:"add",rec})}); return await res.json(); }
-async function fetchTop(n=20){ if(!online()) throw new Error("offline"); const res=await fetch(RANKING_ENDPOINT+"?action=top&n="+n); return await res.json(); }
+async function fetchTop(n=20,period="all"){ if(!online()) throw new Error("offline"); const res=await fetch(RANKING_ENDPOINT+"?action=top&n="+n+"&period="+period); return await res.json(); }
 async function flushPending(){ if(!online()) return; let a=LS.getPending(); if(!a.length) return; const keep=[]; for(const rec of a){ try{ await postScore(rec); }catch(e){ keep.push(rec); } } LS.setPending(keep); }
 
 /* ---------- ホーム（名前ボタン） ---------- */
@@ -488,8 +511,9 @@ document.getElementById("btnNext").onclick=()=>{
   // ステップ境界(5問ごと)で難易度を静かに見直す。最終ステップ後は評価不要
   if(st.i % STEP_SIZE === 0 && st.i < TOTAL_Q){
     const acc = st.stepCorrect / STEP_SIZE;
-    if(acc >= ADVANCE_ACC) st.level = Math.min(3, st.level + 1); // 高→レベルアップ（上限3）
-    // 低→現状維持（下げない）
+    const cap = st.i / STEP_SIZE;               // 入るステップの上限Lv: step2=1, step3=2, step4=3（前半はやさしい）
+    if(acc >= ADVANCE_ACC) st.level = st.level + 1;   // 高正答(4/5以上)のみ上げる
+    st.level = Math.min(st.level, cap, 3);      // 前半は必ずLv1、後半も上限まで。下げはしない
     st.stepCorrect = 0;
   }
   nextQuestion();
@@ -514,7 +538,7 @@ function finish(){
   document.getElementById("resBest").textContent=best+(isRecord?"（新記録！）":"");
   if(isRecord) sfxRecord(); else sfxWin();
   const rec={player:player,score:st.score,title:title,correct:st.correct,total:20,accuracy:acc,level:st.level,ts:new Date().toISOString(),date:new Date().toLocaleDateString("ja-JP")};
-  syncScore(rec); show("scResult");
+  pushHist(rec); syncScore(rec); show("scResult");
 }
 async function syncScore(rec){
   const msg=document.getElementById("syncMsg");
@@ -532,29 +556,32 @@ document.getElementById("btnToRank").onclick=openRank;
 document.getElementById("btnRankRefresh").onclick=openRank;
 document.getElementById("btnRankBack").onclick=()=>{ sfxClick(); show("scHome"); };
 
-/* ---------- ランキング ---------- */
-async function openRank(){
-  sfxClick(); show("scRank");
+/* ---------- ランキング（スコア別 Top20 ／ デイリー・ウィークリー・総合） ---------- */
+let rankPeriod="all";
+function periodLabel(p){ return p==="day"?"デイリー":p==="week"?"ウィークリー":"総合"; }
+function setRankTab(p){ rankPeriod=p; const tabs=document.getElementById("rankTabs"); if(tabs) tabs.querySelectorAll(".rtab").forEach(function(b){ b.classList.toggle("on", b.dataset.p===p); }); }
+async function openRank(p){
+  sfxClick(); if(p) setRankTab(p); show("scRank");
+  const period=rankPeriod;
   const list=document.getElementById("rankList"), net=document.getElementById("rankNet");
   list.innerHTML="<p class='center small'>よみこみ中…</p>";
   if(navigator.onLine && RANKING_ENDPOINT){
-    try{ await flushPending(); const data=await fetchTop(20); const rows=(data&&data.top)?data.top:[];
-      net.innerHTML="<span class='online on'></span>オンライン・最新ランキング"; renderRank(rows,true); return; }catch(e){}
+    try{ await flushPending(); const data=await fetchTop(20,period); const rows=(data&&data.top)?data.top:[];
+      net.innerHTML="<span class='online on'></span>オンライン・最新（"+periodLabel(period)+" Top20）"; renderRank(rows); return; }catch(e){}
   }
-  net.innerHTML="<span class='online'></span>オフライン表示（端末内の記録／未送信分）";
-  const local=[]; PLAYERS.forEach(p=>{ const b=LS.getBest(p); if(b>0) local.push({player:p,score:b,title:titleFor(b)}); });
-  LS.getPending().forEach(r=>local.push({player:r.player,score:r.score,title:r.title,pending:true}));
-  local.sort((a,b)=>b.score-a.score); renderRank(local,false);
+  net.innerHTML="<span class='online'></span>オフライン表示（端末内の記録）";
+  renderRank(localTop(period,20));
 }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
-function renderRank(rows,dedup){
+/* スコア別Top20（同一プレイヤーの複数記録もそのまま並ぶ＝ハイスコアだけ残らない） */
+function renderRank(rows){
   const list=document.getElementById("rankList");
-  if(!rows.length){ list.innerHTML="<p class='center small'>まだ 記録が ないぞ。クエストに でよう！</p>"; return; }
-  if(dedup){ const best={}; rows.forEach(r=>{ if(!best[r.player]||r.score>best[r.player].score) best[r.player]=r; }); rows=Object.values(best).sort((a,b)=>b.score-a.score); }
+  if(!rows||!rows.length){ list.innerHTML="<p class='center small'>この期間の 記録は まだ ないぞ。クエストに でよう！</p>"; return; }
   list.innerHTML="";
-  rows.forEach((r,idx)=>{ const div=document.createElement("div"); div.className="rankrow"+(r.player===player?" me":"");
+  rows.slice(0,20).forEach(function(r,idx){ const div=document.createElement("div"); div.className="rankrow"+(r.player===player?" me":"");
     const medal=["👑","🥈","🥉"][idx];
-    div.innerHTML='<div class="no">'+(medal||(idx+1))+'</div><div style="flex:1"><div class="nm">'+esc(r.player)+(r.pending?" ⏳":"")+'</div><div class="tt">'+esc(r.title||"")+'</div></div><div class="sc">'+(Number(r.score)||0)+'</div>';
+    const dt = r.date? '<span class="rdate">'+esc(String(r.date))+'</span>' : "";
+    div.innerHTML='<div class="no">'+(medal||(idx+1))+'</div><div style="flex:1"><div class="nm">'+esc(r.player)+(r.pending?" ⏳":"")+'</div><div class="tt">'+esc(r.title||"")+' '+dt+'</div></div><div class="sc">'+(Number(r.score)||0)+'</div>';
     list.appendChild(div); });
 }
 
@@ -572,6 +599,8 @@ document.getElementById("btnTriviaBack").onclick=()=>{ sfxClick(); show("scHome"
 /* ---------- 初期化 ---------- */
 flushPending();
 (function(){ const b=document.getElementById("bgmBtn"); if(b){ b.onclick=bgmToggle; } syncBgmBtn(); })();
+/* ランキング期間タブ */
+(function(){ const t=document.getElementById("rankTabs"); if(!t) return; t.querySelectorAll(".rtab").forEach(function(b){ b.onclick=function(){ openRank(b.dataset.p); }; }); })();
 </script>
 </body>
 </html>
