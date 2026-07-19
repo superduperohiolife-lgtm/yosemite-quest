@@ -311,17 +311,31 @@ function ac(){
   return AC;
 }
 /* 最初のタップで音声をアンロック（iOS/Android対策） */
-function unlockAudio(){ const c=ac(); if(c && c.state==="suspended") c.resume().catch(function(){}); if(localStorage.getItem("yq_bgm")!=="off") bgmPlay(); }
+function unlockAudio(){ const c=ac(); if(c && c.state==="suspended") c.resume().catch(function(){}); if(typeof state!=="undefined" && state && localStorage.getItem("yq_bgm")!=="off") bgmForScore(state.score); }
 ["pointerdown","touchend","click"].forEach(function(ev){ window.addEventListener(ev, unlockAudio, {once:true}); });
 
-/* ---------- BGM（ファミコン風ループ） ---------- */
-let BGM=null;
-function bgm(){ if(!BGM){ BGM=new Audio("yosemite_quest_famicom_loop.mp3"); BGM.loop=true; BGM.volume=0.14; BGM.preload="auto"; } return BGM; }
-function bgmPlay(){ if(localStorage.getItem("yq_bgm")==="off") return; try{ const p=bgm().play(); if(p&&p.catch) p.catch(function(){}); }catch(e){} }
-function bgmStop(){ if(BGM){ try{ BGM.pause(); }catch(e){} } }
+/* ---------- BGM：スコア帯で3ステージ切替（出発→成長→決戦） ---------- */
+const BGM_VOL=0.13;  /* 音量控えめ（注意して小さめ） */
+const BGM_TRACKS=[
+  {min:0,    src:"yosemite_quest_stage1_departure_48kbps.mp3"},   // 低スコア：出発
+  {min:1700, src:"yosemite_quest_stage2_growth_48kbps.mp3"},      // 中スコア：成長
+  {min:3500, src:"yosemite_quest_stage3_final_boss_48kbps.mp3"}   // 高スコア：決戦
+];
+let BGMS=null, bgmCur=-1;
+function bgmInit(){ if(!BGMS){ BGMS=BGM_TRACKS.map(function(t){ const a=new Audio(t.src); a.loop=true; a.volume=BGM_VOL; a.preload="auto"; return a; }); } return BGMS; }
+function bgmStageForScore(score){ let idx=0; for(let i=0;i<BGM_TRACKS.length;i++){ if(score>=BGM_TRACKS[i].min) idx=i; } return idx; }
+function bgmStop(){ if(BGMS){ BGMS.forEach(function(a){ try{ a.pause(); }catch(e){} }); } bgmCur=-1; }
+/* スコアに応じて適切なステージのBGMを再生（ゲーム中に呼ぶ） */
+function bgmForScore(score){
+  if(localStorage.getItem("yq_bgm")==="off"){ bgmStop(); return; }
+  bgmInit();
+  const idx=bgmStageForScore(score);
+  if(idx!==bgmCur){ BGMS.forEach(function(a,i){ if(i!==idx){ try{ a.pause(); }catch(e){} } }); bgmCur=idx; }
+  try{ const p=BGMS[idx].play(); if(p&&p.catch) p.catch(function(){}); }catch(e){}
+}
 function bgmToggle(){
   const off = localStorage.getItem("yq_bgm")==="off";
-  if(off){ localStorage.setItem("yq_bgm","on"); bgmPlay(); }
+  if(off){ localStorage.setItem("yq_bgm","on"); if(typeof state!=="undefined" && state) bgmForScore(state.score); }
   else{ localStorage.setItem("yq_bgm","off"); bgmStop(); }
   syncBgmBtn();
 }
@@ -399,7 +413,7 @@ document.getElementById("btnTrivia").onclick=openTrivia;
 function startQuest(name){
   player=name;
   state={ i:0, level:1, score:0, streak:0, maxStreak:0, correct:0, used:new Set(), stepCorrect:0, q:null, answered:false };
-  sfxStart(); bgmPlay(); show("scQuiz"); nextQuestion();
+  sfxStart(); bgmForScore(0); show("scQuiz"); nextQuestion();
 }
 function pickItem(level,used){
   const tryLevels=[level, level+1, level-1, level+2, level-2];
@@ -460,6 +474,7 @@ function answer(btn,chosen,item){
   }else{ st.streak=0; sfxNg(); flashJudge(false); }
   document.getElementById("curScore").textContent=st.score;
   document.getElementById("curStreak").textContent=st.streak;
+  bgmForScore(st.score);  // スコア帯に応じてBGMを切替（出発→成長→決戦）
   const ex=document.getElementById("explain");
   ex.innerHTML='<span class="m">'+item.t+'</span> ＝ '+item.m+'<div class="note">'+(item.note?("💡 "+item.note+"　"):"")+'発音: '+item.kana+'</div>';
   document.getElementById("afterWin").style.display="block";
