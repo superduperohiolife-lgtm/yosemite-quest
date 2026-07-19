@@ -108,6 +108,7 @@ h1.title{text-align:center;font-size:30px;line-height:1.25;margin:22px 0 4px;col
 .lrow .lsc{color:#7e93d0;}
 .lrow.on{background:#122a6e;color:#fff;border-radius:6px;border-bottom-color:transparent;}
 .lrow.on .lno,.lrow.on .lsc{color:var(--gold);}
+.lrow.locked .lnm{color:#5f77c0;letter-spacing:4px;}  /* 未到達の称号は伏せ字 */
 .lrow.on .lnm:after{content:" ◀ いまここ";color:var(--gold);font-size:11px;}
 
 .center{text-align:center;}
@@ -255,13 +256,31 @@ function titleInfo(score){
   const next=TITLES[idx+1]||null;
   return { idx:idx, total:TITLES.length, cur:TITLES[idx], next:next, toNext: next? (next.min-score) : 0 };
 }
-function renderLadder(curIdx){
+/* 端末内ベストの最高点（誰かが到達済みの目安。オフライン時の伏せ判定に使用） */
+function localMaxScore(){ let m=0; PLAYERS.forEach(function(p){ m=Math.max(m, LS.getBest(p)); }); return m; }
+/* 称号ラダー：maxScore 以下の称号のみ名前を表示。未到達は＊＊＊で伏せる（ワクワク用） */
+function renderLadder(curIdx, maxScore){
   const box=document.getElementById("titleLadder"); if(!box) return;
-  box.innerHTML=TITLES.map((x,i)=>{
+  maxScore = maxScore||0;
+  box.innerHTML=TITLES.map(function(x,i){
     const hi=TITLES[i+1]? (TITLES[i+1].min-1) : null;
     const range = hi!=null ? (x.min+"〜"+hi) : (x.min+"〜");
-    return '<div class="lrow'+(i===curIdx?' on':'')+'"><span class="lno">'+(i+1)+'</span><span class="lnm">'+x.t+'</span><span class="lsc">'+range+'</span></div>';
+    const reached = x.min<=maxScore;
+    const nm = reached ? esc(x.t) : "＊＊＊＊＊＊";
+    const cls = "lrow"+(i===curIdx?" on":"")+(reached?"":" locked");
+    return '<div class="'+cls+'"><span class="lno">'+(i+1)+'</span><span class="lnm">'+nm+'</span><span class="lsc">'+range+'</span></div>';
   }).join("");
+}
+/* 結果画面の称号表示（maxScore=記録済みの最高点。自分の今回スコアは達成済み扱い） */
+function renderResultTitle(maxScore){
+  const st=state; if(!st) return;
+  const info=titleInfo(st.score);
+  maxScore=Math.max(maxScore||0, st.score);
+  const nextName = info.next ? (info.next.min<=maxScore ? esc(info.next.t) : "＊＊＊＊") : null;
+  const posLine = "ランク "+(info.idx+1)+" / "+info.total
+      + (info.next ? ("　次「"+nextName+"」まで あと"+info.toNext+"てん") : "　★最高ランク到達★");
+  document.getElementById("resTitle").innerHTML=esc(info.cur.t)+"<small>"+posLine+"</small>";
+  renderLadder(info.idx, maxScore);
 }
 
 /* ---------- 状態 ---------- */
@@ -297,7 +316,7 @@ function unlockAudio(){ const c=ac(); if(c && c.state==="suspended") c.resume().
 
 /* ---------- BGM（ファミコン風ループ） ---------- */
 let BGM=null;
-function bgm(){ if(!BGM){ BGM=new Audio("yosemite_quest_famicom_loop.mp3"); BGM.loop=true; BGM.volume=0.32; BGM.preload="auto"; } return BGM; }
+function bgm(){ if(!BGM){ BGM=new Audio("yosemite_quest_famicom_loop.mp3"); BGM.loop=true; BGM.volume=0.14; BGM.preload="auto"; } return BGM; }
 function bgmPlay(){ if(localStorage.getItem("yq_bgm")==="off") return; try{ const p=bgm().play(); if(p&&p.catch) p.catch(function(){}); }catch(e){} }
 function bgmStop(){ if(BGM){ try{ BGM.pause(); }catch(e){} } }
 function bgmToggle(){
@@ -308,6 +327,7 @@ function bgmToggle(){
 }
 function syncBgmBtn(){ const b=document.getElementById("bgmBtn"); if(b) b.textContent = (localStorage.getItem("yq_bgm")==="off") ? "🔇" : "🎵"; }
 /* 音列を鳴らす：notes=[[freq,dur],...] */
+const SFX_VOL=0.32;  /* 効果音のマスター音量（小さめ。全sfxに掛かる） */
 function playSeq(notes,type="square",gain=0.07){
   const c=ac(); if(!c) return; let t=c.currentTime;
   notes.forEach(([f,dur])=>{
@@ -315,7 +335,7 @@ function playSeq(notes,type="square",gain=0.07){
       const o=c.createOscillator(),g=c.createGain();
       o.type=type; o.frequency.setValueAtTime(f,t);
       o.connect(g); g.connect(c.destination);
-      g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.95);
+      g.gain.setValueAtTime(gain*SFX_VOL,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.95);
       o.start(t); o.stop(t+dur);
     }
     t+=dur;
@@ -463,10 +483,7 @@ function finish(){
   const title=info.cur.t;
   document.getElementById("resWho").textContent=player+" の けっか";
   document.getElementById("resScore").textContent=st.score;
-  const posLine = "ランク "+(info.idx+1)+" / "+info.total
-      + (info.next ? ("　次「"+info.next.t+"」まで あと"+info.toNext+"てん") : "　★最高ランク到達★");
-  document.getElementById("resTitle").innerHTML=title+"<small>"+posLine+"</small>";
-  renderLadder(info.idx);
+  renderResultTitle(localMaxScore());  // 記録済みの称号だけ表示（未到達は伏せる）
   document.getElementById("resCorrect").textContent=st.correct+" / 20";
   document.getElementById("resAcc").textContent=acc+"%";
   document.getElementById("resStreak").textContent=st.maxStreak;
@@ -483,7 +500,9 @@ async function syncScore(rec){
   if(!navigator.onLine){ pushPending(rec); msg.innerHTML="📴 圏外のため 端末に保存。接続時にランキング反映（トップ5保持）"; return; }
   if(!RANKING_ENDPOINT){ msg.innerHTML="ℹ️ ランキング未設定（端末内ベストのみ記録）"; return; }
   msg.textContent="ランキングに 反映ちゅう…";
-  try{ await postScore(rec); await flushPending(); msg.innerHTML="✅ ランキングに 反映した！"; }
+  try{ await postScore(rec); await flushPending();
+    try{ const data=await fetchTop(20); const rows=(data&&data.top)?data.top:[]; let om=localMaxScore(); rows.forEach(function(r){ om=Math.max(om, Number(r.score)||0); }); renderResultTitle(om); }catch(e2){}
+    msg.innerHTML="✅ ランキングに 反映した！"; }
   catch(e){ pushPending(rec); msg.innerHTML="⚠️ 反映失敗。端末に保存し 次回接続時に再送（トップ5保持）"; }
 }
 document.getElementById("btnAgain").onclick=()=>startQuest(player);
