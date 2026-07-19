@@ -406,14 +406,20 @@ function pickItem(level,used){
   for(const L of tryLevels){ const cand=DATA.filter(d=>d.lv===L && !used.has(d.s)); if(cand.length) return cand[Math.floor(Math.random()*cand.length)]; }
   const any=DATA.filter(d=>!used.has(d.s)); return any.length? any[Math.floor(Math.random()*any.length)] : DATA[0];
 }
-/* 選択肢：まず近い誤答(d)、足りなければ同カテゴリ→他カテゴリで補完 */
+/* 意味が「動詞的」か（〜する/〜る 等で終わる）。選択肢の種類ミスマッチ防止に使う */
+function isVerbLike(m){ const last=String(m).split(/[・\/]/).pop(); return /(する|した|される|れる|せる|る|う|く|ぐ|す|つ|ぶ|む|ぬ)$/.test(last); }
+/* 選択肢：まず近い誤答(d)、足りなければ「同カテゴリ×同種類→同カテゴリ→他カテゴリ×同種類→他」で補完
+   （例:法令の答えに「測量する」等 種類違いの誤答が混じるのを防ぐ） */
 function buildChoices(item,n){
   const set=new Set([item.m]);
   (item.d||[]).forEach(x=>{ if(set.size<n && x!==item.m) set.add(x); });
-  const sameCat=DATA.filter(d=>d.cat===item.cat && d.m!==item.m);
-  const others=DATA.filter(d=>d.cat!==item.cat && d.m!==item.m);
-  const draw=(arr)=>{ arr.sort(()=>Math.random()-0.5); for(const d of arr){ if(set.size>=n)break; set.add(d.m);} };
-  draw(sameCat); draw(others);
+  const wantV=isVerbLike(item.m);
+  const pool=DATA.filter(d=>d.m!==item.m);
+  const draw=(arr)=>{ arr=arr.slice().sort(()=>Math.random()-0.5); for(const d of arr){ if(set.size>=n)break; set.add(d.m);} };
+  draw(pool.filter(d=>d.cat===item.cat && isVerbLike(d.m)===wantV));  // 同カテゴリ×同種類
+  draw(pool.filter(d=>d.cat===item.cat));                            // 同カテゴリ
+  draw(pool.filter(d=>isVerbLike(d.m)===wantV));                     // 他カテゴリ×同種類
+  draw(pool);                                                        // 最後は何でも
   const list=[...set].slice(0,n); list.sort(()=>Math.random()-0.5); return list;
 }
 const CAT_LABEL={geo:"地形",spot:"名所",hist:"歴史",nat:"自然"};

@@ -78,7 +78,7 @@ window.QUIZ_DATA = [
  {s:"From Glacier Point you get a sweeping *vista* of the valley.", m:"（広がる）眺望・遠望", kana:"ビスタ", cat:"spot", lv:2, d:["近道","休憩所","案内板"]},
  {s:"Tunnel View is the valley's most famous *overlook*.", m:"見下ろす展望台", kana:"オーバールック", cat:"spot", lv:1, d:["登山口","広場","分岐点"]},
  {s:"Mariposa Grove protects hundreds of giant *sequoias*.", m:"北米原産の巨大な樹木", kana:"セコイアズ", cat:"spot", lv:1, note:"通称 Big Trees", d:["針葉樹の若木","樫の大木","洞窟群"]},
- {s:"The sequoias here are affectionately called the *Big Trees*.", m:"巨木の愛称・大木", kana:"ビッグツリーズ", cat:"spot", lv:1, d:["枯れた切り株","並木道","原生林全体"]},
+ {s:"The sequoias here are *affectionately* called the Big Trees.", m:"親しみを込めて", kana:"アフェクショネイトリー", cat:"spot", lv:3, note:"affectionately=愛情を込めて", d:["よそよそしく","皮肉を込めて","おおげさに"]},
  {s:"Tuolumne Meadows is a vast subalpine *meadow*.", m:"草原・草地", kana:"メドウ", cat:"spot", lv:1, d:["湿地","荒れ地","牧場の柵"]},
  {s:"Spray from the falls drenches hikers with cold *mist*.", m:"霧状のしぶき", kana:"ミスト", cat:"spot", lv:2, d:["虹","苔","急流"]},
  {s:"Inspiration Point offers a view of *stupendous* grandeur.", m:"途方もない・驚異的な", kana:"ステューペンダス", cat:"spot", lv:3, note:"NPS引用の語", d:["ささやかな","不気味な","荒涼とした"]},
@@ -129,7 +129,7 @@ window.QUIZ_DATA = [
  {s:"Pull over at the roadside *wayside* to read the exhibit.", m:"道端の展示・休憩スポット", kana:"ウェイサイド", cat:"spot", lv:3, d:["料金所","検問所","分岐点"]},
 
 /* ===================== hist：歴史・人物・文化 ===================== */
- {s:"In 1864, Lincoln signed the *Yosemite Grant* to protect the land.", m:"1864年に谷を保護した法令", kana:"ヨセミテグラント", cat:"hist", lv:3, note:"自然保護の先駆けとなる法", d:["先住民との条約","国立公園法","土地払下げ令"]},
+ {s:"Lincoln signed the Yosemite Grant to *safeguard* the valley.", m:"守る・保護する", kana:"セーフガード", cat:"hist", lv:2, note:"safeguard=保護する（Yosemite Grant=1864年の保護令）", d:["見捨てる・手放す","切り開いて開発する","記録に残す"]},
  {s:"John Muir was a *naturalist* who fought to protect Yosemite.", m:"博物学者・自然研究家", kana:"ナチュラリスト", cat:"hist", lv:1, d:["登山家","写真家","地質学者"]},
  {s:"Muir became a fierce *defender* of the wilderness.", m:"擁護者・守り手", kana:"ディフェンダー", cat:"hist", lv:1, d:["批評家","開拓者","案内人"]},
  {s:"The park's creation was an early act of *preservation*.", m:"（自然の）保存・保護", kana:"プリザベーション", cat:"hist", lv:2, note:"preserve=保存する", d:["開発","調査","復元"]},
