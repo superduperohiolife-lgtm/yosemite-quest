@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a1a4f">
 <title>Yosemite Quest</title>
-<link rel="icon" type="image/png" href="icon.png">
-<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="yosemite-quest-icon-512.png">
+<link rel="apple-touch-icon" href="yosemite-quest-icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
@@ -22,10 +22,10 @@ html,body{margin:0;padding:0;height:100%;}
 body{font-family:"DotGothic16","Meiryo UI","Hiragino Kaku Gothic ProN",monospace;background:#04102e;color:var(--ink);overflow-x:hidden;-webkit-user-select:none;user-select:none;letter-spacing:.5px;}
 /* ===== 背景：ドット絵（昼/夜）を全画面。画像が無い間はグラデにフォールバック ===== */
 #bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background-color:#0a1230;
-  background-image:url('bg-day.png'), linear-gradient(180deg,var(--sky1),var(--sky2) 55%,#cfe6c8);
+  background-image:url('yosemite-day-720x1280.webp'), linear-gradient(180deg,var(--sky1),var(--sky2) 55%,#cfe6c8);
   background-size:cover;background-position:center top;background-repeat:no-repeat;
   image-rendering:pixelated;image-rendering:crisp-edges;}
-body.night #bg{background-image:url('bg-night.png'), linear-gradient(180deg,#0a1030,#1a2452 60%,#243a5e);}
+body.night #bg{background-image:url('yosemite-night-720x1280.webp'), linear-gradient(180deg,#0a1030,#1a2452 60%,#243a5e);}
 /* 上下スクリム：明るい昼背景でも文字を読みやすく（中央のドット絵は活かす） */
 .scrim{position:absolute;inset:0;pointer-events:none;background:
   linear-gradient(180deg, rgba(4,16,46,.48) 0%, rgba(4,16,46,0) 20%, rgba(4,16,46,0) 56%, rgba(4,16,46,.66) 100%);}
