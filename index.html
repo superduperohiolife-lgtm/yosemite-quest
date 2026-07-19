@@ -480,6 +480,7 @@ async function openRank(){
   LS.getPending().forEach(r=>local.push({player:r.player,score:r.score,title:r.title,pending:true}));
   local.sort((a,b)=>b.score-a.score); renderRank(local,false);
 }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
 function renderRank(rows,dedup){
   const list=document.getElementById("rankList");
   if(!rows.length){ list.innerHTML="<p class='center small'>まだ 記録が ないぞ。クエストに でよう！</p>"; return; }
@@ -487,7 +488,7 @@ function renderRank(rows,dedup){
   list.innerHTML="";
   rows.forEach((r,idx)=>{ const div=document.createElement("div"); div.className="rankrow"+(r.player===player?" me":"");
     const medal=["👑","🥈","🥉"][idx];
-    div.innerHTML='<div class="no">'+(medal||(idx+1))+'</div><div style="flex:1"><div class="nm">'+r.player+(r.pending?" ⏳":"")+'</div><div class="tt">'+(r.title||"")+'</div></div><div class="sc">'+r.score+'</div>';
+    div.innerHTML='<div class="no">'+(medal||(idx+1))+'</div><div style="flex:1"><div class="nm">'+esc(r.player)+(r.pending?" ⏳":"")+'</div><div class="tt">'+esc(r.title||"")+'</div></div><div class="sc">'+(Number(r.score)||0)+'</div>';
     list.appendChild(div); });
 }
 
