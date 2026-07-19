@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a1a4f">
+<title>Yosemite Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+/* ===== 18bit 冒険色 / ドラクエ風 レトロUI ===== */
+:root{
+  --win:#0a1a4f; --win2:#122a6e; --ink:#ffffff; --gold:#ffd23f;
+  --granite:#7d8491; --pine:#1f6f4a; --sky1:#2b6cb0; --sky2:#7fb2e6; --sun:#ffcf6b;
+  --ok:#3ddc84; --ng:#ff5a5a; --shadow:#04102e;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;}
+body{font-family:"DotGothic16","Meiryo UI","Hiragino Kaku Gothic ProN",monospace;background:#04102e;color:var(--ink);overflow-x:hidden;-webkit-user-select:none;user-select:none;letter-spacing:.5px;}
+#bg{position:fixed;inset:0;z-index:-1;overflow:hidden;}
+.sky{position:absolute;inset:0;background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 55%,#cfe6c8 100%);}
+.sun{position:absolute;top:8%;right:14%;width:70px;height:70px;border-radius:50%;background:radial-gradient(circle,#fff3c4 0%,var(--sun) 60%,transparent 72%);}
+.mtn{position:absolute;bottom:32%;left:50%;transform:translateX(-50%);width:120%;height:44%;background:linear-gradient(180deg,#9aa1ad,#5b6270);clip-path:polygon(0% 100%,10% 60%,22% 78%,34% 30%,44% 55%,52% 8%,60% 52%,72% 34%,84% 66%,94% 48%,100% 100%);opacity:.96;}
+.fall{position:absolute;bottom:36%;left:52%;width:10px;height:26%;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.2));border-radius:6px;filter:blur(.4px);}
+.pines{position:absolute;bottom:0;left:0;right:0;height:34%;background:linear-gradient(180deg,var(--pine),#0f3a27);clip-path:polygon(0 40%,5% 20%,9% 42%,14% 14%,19% 44%,24% 22%,30% 46%,36% 18%,42% 46%,48% 20%,54% 46%,60% 16%,66% 46%,72% 22%,78% 46%,84% 18%,90% 44%,96% 22%,100% 44%,100% 100%,0 100%);}
+.stars{position:absolute;inset:0;opacity:0;transition:opacity .6s;}
+body.night .sky{background:linear-gradient(180deg,#0a1030,#1a2452 60%,#243a5e);}
+body.night .stars{opacity:1;}
+
+#app{position:relative;max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:14px 12px 26px;}
+.screen{display:none;animation:fade .25s ease;}
+.screen.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.win{background:var(--win);border:4px solid var(--ink);border-radius:10px;box-shadow:0 0 0 4px var(--shadow),0 8px 0 0 var(--shadow);padding:16px;margin:12px 0;}
+.win.gold{border-color:var(--gold);}
+h1.title{text-align:center;font-size:30px;line-height:1.25;margin:22px 0 4px;color:var(--gold);text-shadow:3px 3px 0 var(--shadow),0 0 10px rgba(255,210,63,.4);letter-spacing:1px;}
+.subtitle{text-align:center;color:#e7edff;font-size:13px;margin:0 0 4px;letter-spacing:1px;}
+
+.cmd{display:block;width:100%;text-align:left;background:var(--win2);color:var(--ink);border:3px solid var(--ink);border-radius:8px;font:inherit;font-size:19px;font-weight:bold;padding:14px 14px 14px 40px;margin:10px 0;position:relative;cursor:pointer;transition:transform .05s;}
+.cmd:before{content:"▶";position:absolute;left:14px;color:var(--gold);opacity:0;}
+.cmd:active{transform:translateY(2px);}
+.cmd:hover:before,.cmd:focus:before{opacity:1;}
+.cmd.small{font-size:15px;}
+
+/* 名前ボタン（2列） */
+.names{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
+.namebtn{background:var(--win2);color:var(--gold);border:3px solid var(--gold);border-radius:8px;font:inherit;font-size:20px;font-weight:bold;padding:16px 8px;cursor:pointer;transition:transform .05s;}
+.namebtn:active{transform:translateY(2px);background:#1c3a86;}
+
+.choices{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
+.choice{background:var(--win2);color:var(--ink);border:3px solid var(--ink);border-radius:8px;font:inherit;font-size:18px;font-weight:bold;padding:14px 12px;text-align:left;cursor:pointer;position:relative;transition:transform .05s;}
+.choice:active{transform:translateY(2px);}
+.choice.correct{background:#0f5a34;border-color:var(--ok);}
+.choice.wrong{background:#5a1010;border-color:var(--ng);}
+.choice .mk{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:26px;}
+
+.qcat{display:inline-block;font-size:12px;font-weight:bold;color:#04102e;background:var(--gold);border-radius:6px;padding:3px 12px;margin:0 0 6px;letter-spacing:2px;border:2px solid #04102e;}
+.qcat.geo{background:#b8c0cc;} .qcat.spot{background:#7fb2e6;} .qcat.hist{background:#ffd23f;} .qcat.nat{background:#5fc98a;}
+.qsentence{font-size:21px;line-height:1.65;color:#eef3ff;margin:6px 2px 2px;}
+.qsentence u.tgt{text-decoration:none;color:var(--gold);font-weight:bold;border-bottom:4px solid var(--gold);padding:0 2px;text-shadow:0 0 8px rgba(255,210,63,.5);}
+.qkana{color:#9db4ff;font-size:14px;margin:8px 2px 0;letter-spacing:1px;}
+.speak{background:none;border:none;color:var(--gold);font-size:20px;cursor:pointer;vertical-align:middle;padding:0 6px;}
+
+.hud{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:#cfe0ff;padding:2px 4px;}
+.hud b{color:var(--gold);}
+.bar{height:12px;background:#04102e;border:2px solid var(--ink);border-radius:6px;overflow:hidden;margin:6px 0 2px;}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#ff9d3f);width:0;transition:width .3s;}
+
+#judge{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:40;pointer-events:none;}
+#judge.show{display:flex;}
+#judge .sym{font-size:170px;font-weight:bold;}
+#judge .sym.ok{color:var(--ok);text-shadow:0 0 24px rgba(61,220,132,.8),4px 4px 0 var(--shadow);animation:pop .4s ease;}
+#judge .sym.ng{color:var(--ng);text-shadow:0 0 24px rgba(255,90,90,.8),4px 4px 0 var(--shadow);animation:pop .4s ease;}
+@keyframes pop{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+
+.explain{margin-top:12px;font-size:15px;line-height:1.6;color:#e9eeff;}
+.explain .m{color:var(--gold);font-weight:bold;font-size:18px;}
+.explain .note{color:#a9c0ff;font-size:13px;margin-top:6px;}
+
+.big{font-size:44px;color:var(--gold);text-shadow:3px 3px 0 var(--shadow);text-align:center;margin:6px 0;}
+.rankTitle{text-align:center;font-size:24px;color:#fff;margin:4px 0 2px;line-height:1.3;}
+.rankTitle small{display:block;color:var(--gold);font-size:14px;margin-top:4px;}
+.stat{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px dashed #33468f;font-size:16px;}
+.stat b{color:var(--gold);}
+
+.rankrow{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid #26397f;font-size:15px;}
+.rankrow .no{width:34px;text-align:center;font-size:18px;color:var(--gold);font-weight:bold;}
+.rankrow .nm{font-weight:bold;}
+.rankrow .sc{color:#ffe08a;font-weight:bold;}
+.rankrow .tt{font-size:11px;color:#9db4ff;}
+.rankrow.me{background:#122a6e;border-radius:6px;}
+.notice{font-size:12px;color:#9db4ff;text-align:center;margin:8px 0;}
+.online{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--ng);margin-right:5px;vertical-align:middle;}
+.online.on{background:var(--ok);}
+.trivia-card{border-bottom:1px solid #26397f;padding:10px 2px;font-size:15px;line-height:1.6;}
+.trivia-card b{color:var(--gold);}
+.ladder{margin-top:2px;}
+.lrow{display:flex;align-items:center;gap:8px;font-size:12px;color:#9db4ff;padding:4px 4px;border-bottom:1px dashed #26397f;}
+.lrow .lno{width:22px;text-align:center;color:#6f86c8;font-weight:bold;}
+.lrow .lnm{flex:1;}
+.lrow .lsc{color:#7e93d0;}
+.lrow.on{background:#122a6e;color:#fff;border-radius:6px;border-bottom-color:transparent;}
+.lrow.on .lno,.lrow.on .lsc{color:var(--gold);}
+.lrow.on .lnm:after{content:" ◀ いまここ";color:var(--gold);font-size:11px;}
+
+.center{text-align:center;}
+.small{font-size:12px;color:#9db4ff;}
+.footer{text-align:center;font-size:11px;color:#5f77c0;margin-top:14px;}
+</style>
+</head>
+<body>
+<div id="bg"><div class="sky"></div><div class="stars" id="stars"></div><div class="sun"></div><div class="mtn"></div><div class="fall"></div><div class="pines"></div></div>
+<div id="judge"><div class="sym" id="judgeSym"></div></div>
+
+<div id="app">
+
+  <!-- ===== ホーム（トップ＝メニュー） ===== -->
+  <section id="scHome" class="screen active">
+    <h1 class="title">Yosemite<br>Quest</h1>
+    <p class="subtitle">～ 現地の案内・解説を 読破せよ ～</p>
+    <div class="win gold">
+      <p class="center" style="font-size:20px;margin:2px 0 10px;color:var(--gold)">ぜん 20もん</p>
+      <p class="center" style="font-size:14px;margin:0 0 8px;color:#cfe0ff">だれが ちょうせんする？</p>
+      <div class="names" id="nameButtons"></div>
+    </div>
+    <button class="cmd small" id="btnRank">＊ ランキングを みる</button>
+    <button class="cmd small" id="btnTrivia">＊ ヨセミテ豆知識</button>
+    <p class="footer">© Yosemite Quest</p>
+  </section>
+
+  <!-- ===== クイズ ===== -->
+  <section id="scQuiz" class="screen">
+    <div class="hud"><span>もんだい <b id="qNo">1</b>/20</span><span>スコア <b id="curScore">0</b></span><span>れんぞく <b id="curStreak">0</b></span></div>
+    <div class="bar"><i id="qBar"></i></div>
+    <div class="win" id="qWin">
+      <div><span class="qcat" id="qCat"></span></div>
+      <p class="qsentence" id="qSentence"></p>
+      <p class="qkana"><span id="qKana"></span><button class="speak" id="btnSpeak" title="はつおん">🔊</button></p>
+    </div>
+    <div class="choices" id="choices"></div>
+    <div class="win" id="afterWin" style="display:none">
+      <div class="explain" id="explain"></div>
+      <button class="cmd" id="btnNext" style="margin-top:10px">＊ つぎへ</button>
+    </div>
+  </section>
+
+  <!-- ===== 結果 ===== -->
+  <section id="scResult" class="screen">
+    <div class="win gold center">
+      <p style="font-size:15px;margin:2px" id="resWho">クエスト かんりょう！</p>
+      <p class="big" id="resScore">0</p>
+      <p class="rankTitle" id="resTitle"></p>
+    </div>
+    <div class="win">
+      <div class="stat"><span>せいとうすう</span><b id="resCorrect">0 / 20</b></div>
+      <div class="stat"><span>せいとうりつ</span><b id="resAcc">0%</b></div>
+      <div class="stat"><span>さいだい れんぞく</span><b id="resStreak">0</b></div>
+      <div class="stat"><span>じぶんの ベスト</span><b id="resBest">0</b></div>
+    </div>
+    <div class="win">
+      <p class="center small" style="margin:2px 0 8px;color:var(--gold)">◆ 称号ランク（全8段階）◆</p>
+      <div class="ladder" id="titleLadder"></div>
+    </div>
+    <div class="win"><p class="center" id="syncMsg" style="font-size:14px;margin:2px">ランキング はんえい ちゅう…</p></div>
+    <button class="cmd" id="btnAgain">＊ もういちど（同じ人）</button>
+    <button class="cmd" id="btnToRank">＊ ランキングを みる</button>
+    <button class="cmd small" id="btnToHome">＊ トップへ もどる</button>
+  </section>
+
+  <!-- ===== ランキング ===== -->
+  <section id="scRank" class="screen">
+    <div class="win gold">
+      <p class="center" style="font-size:20px;color:var(--gold);margin:2px">★ ランキング ★</p>
+      <p class="notice" id="rankNet"></p>
+      <div id="rankList"></div>
+    </div>
+    <button class="cmd small" id="btnRankRefresh">＊ さいしんに こうしん</button>
+    <button class="cmd small" id="btnRankBack">＊ もどる</button>
+  </section>
+
+  <!-- ===== 豆知識 ===== -->
+  <section id="scTrivia" class="screen">
+    <div class="win gold">
+      <p class="center" style="font-size:20px;color:var(--gold);margin:2px 0 8px">◆ ヨセミテ豆知識 ◆</p>
+      <div id="triviaList"></div>
+    </div>
+    <button class="cmd small" id="btnTriviaBack">＊ もどる</button>
+  </section>
+
+</div>
+
+<script src="data.js"></script>
+<script>
+"use strict";
+/* ============================================================
+   ヨセミテ英語クエスト  ―  単一ファイル / オフライン動作
+   ・英文（NPS/現地の案内・解説風）の下線語/表現の意味を選ぶ
+   ・目標：Yosemiteの各スポット解説・歴史説明を読破できる語彙力
+   ・20問 一気通貫。途中で難易度を「非表示で」変動（易→上げる）
+   ・選択肢は近い誤答（distractor）中心で 5/6/7（運正解を抑制）
+   ・スコアは難易度で重み付け（総合ランキング公平化）
+   ・圏外はトップ5スコアを保持→接続時にランキング反映
+   ============================================================ */
+
+/* ▼ デプロイ後にここへ GAS Web App の URL を貼る（空でもオフライン動作）*/
+const RANKING_ENDPOINT = "";
+
+const PLAYERS = ["Toshiya","Natsuko","Yume","Yuki"];
+
+/* ---------- 問題データ（data.js から読み込み） ---------- */
+const DATA = window.QUIZ_DATA || [];
+
+/* target 展開 */
+DATA.forEach(d=>{ const mm=d.s.match(/\*([^*]+)\*/); d.t = mm?mm[1]:""; });
+
+/* 豆知識（NPS等で確認済みの事実） */
+const TRIVIA = [
+ "El Capitan の垂直な岩壁は 谷底から <b>約3,000ft（約900m）</b> そびえる一枚岩。",
+ "Yosemite Valley は氷河の侵食でできた <b>U字型の谷</b>。もとはV字谷だった。",
+ "1864年、リンカーン大統領が <b>Yosemite Grant</b> に署名。自然保護の歴史的先例。",
+ "谷の先住民 <b>Ahwahneechee</b> の子孫は 今もヨセミテの歴史の一部。",
+ "博物学者 <b>John Muir</b> はヨセミテの擁護者。1872年に氷河の動きを初めて測定。",
+ "Bridalveil Fall は <b>懸谷(hanging valley)</b> から落ちる滝。氷河が本谷を深く削った名残。",
+ "現在ヨセミテで最も活発な地質作用は <b>落石(rockfall)</b>。雨・地震・日射で起きる。",
+ "Yosemite Falls の落差は <b>約739m（2,425ft）</b>。北米有数の高さ。",
+ "Half Dome は標高 <b>約2,695m</b> の巨大な花崗岩ドーム。",
+ "Mariposa Grove は巨木 <b>ジャイアントセコイア（Big Trees）</b> を数百本 保護。",
+ "ヨセミテ最高峰は <b>Mount Lyell（13,114ft・約3,997m）</b>。",
+ "El Capitan・Half Dome を撮り続けた写真家 <b>Ansel Adams</b> でも有名。"
+];
+
+/* 称号（20問アダプティブの最大 約5700点に合わせ調整） */
+const TITLES = [
+ {min:0,    t:"パンフレット みならい"},
+ {min:900,  t:"案内板 よみかき ばん"},
+ {min:1700, t:"トレイルの あんない人"},
+ {min:2600, t:"レンジャー みならい"},
+ {min:3500, t:"ヨセミテ 解説ハンター"},
+ {min:4300, t:"花崗岩の ことば使い"},
+ {min:5000, t:"ヨセミテ通訳 マスター"},
+ {min:5500, t:"ヨセミテの かしこき ゆうしゃ"}
+];
+function titleFor(score){ let t=TITLES[0].t; for(const x of TITLES){ if(score>=x.min) t=x.t; } return t; }
+/* 称号の全体位置づけ（現在ランク／次の称号まで） */
+function titleInfo(score){
+  let idx=0; for(let i=0;i<TITLES.length;i++){ if(score>=TITLES[i].min) idx=i; }
+  const next=TITLES[idx+1]||null;
+  return { idx:idx, total:TITLES.length, cur:TITLES[idx], next:next, toNext: next? (next.min-score) : 0 };
+}
+function renderLadder(curIdx){
+  const box=document.getElementById("titleLadder"); if(!box) return;
+  box.innerHTML=TITLES.map((x,i)=>{
+    const hi=TITLES[i+1]? (TITLES[i+1].min-1) : null;
+    const range = hi!=null ? (x.min+"〜"+hi) : (x.min+"〜");
+    return '<div class="lrow'+(i===curIdx?' on':'')+'"><span class="lno">'+(i+1)+'</span><span class="lnm">'+x.t+'</span><span class="lsc">'+range+'</span></div>';
+  }).join("");
+}
+
+/* ---------- 状態 ---------- */
+/* 20問＝4ステップ×5問。各ステップの正答率でレベルを見直す（非表示）
+   ・ステップ1は必ずレベル1
+   ・正答率が高い(=3/5以上)→レベルを1つ上げる（1→2→3→3 上限3）
+   ・正答率が低い→現状維持（下げない）              */
+const STEP_SIZE=5;                  // 1ステップの問題数
+const TOTAL_Q=20;                   // 全問題数
+const ADVANCE_ACC=0.6;              // これ以上でレベルアップ（5問中3問）
+const CHOICE_BY_LV={1:5,2:6,3:7};
+let state=null, player=null;
+
+/* ---------- localStorage ---------- */
+const LS={
+  getBest:p=>+(localStorage.getItem("yq_best_"+p)||0),
+  setBest:(p,v)=>localStorage.setItem("yq_best_"+p,String(v)),
+  getPending:()=>{try{return JSON.parse(localStorage.getItem("yq_pending")||"[]")}catch(e){return[]}},
+  setPending:a=>localStorage.setItem("yq_pending",JSON.stringify(a))
+};
+function pushPending(rec){ let a=LS.getPending(); a.push(rec); a.sort((x,y)=>y.score-x.score); a=a.slice(0,5); LS.setPending(a); }
+
+/* ---------- 効果音（WebAudio・冒険風） ---------- */
+let AC=null;
+function ac(){ if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}} return AC; }
+/* 音列を鳴らす：notes=[[freq,dur],...] */
+function playSeq(notes,type="square",gain=0.07){
+  const c=ac(); if(!c) return; let t=c.currentTime;
+  notes.forEach(([f,dur])=>{
+    if(f>0){
+      const o=c.createOscillator(),g=c.createGain();
+      o.type=type; o.frequency.setValueAtTime(f,t);
+      o.connect(g); g.connect(c.destination);
+      g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.95);
+      o.start(t); o.stop(t+dur);
+    }
+    t+=dur;
+  });
+}
+const N={C5:523,D5:587,E5:659,F5:659,G5:784,A5:880,B5:988,C6:1046,D6:1175,E6:1319,G6:1568,C4:262,E4:330,G4:392,A4:440,B3:247};
+const sfxStart =()=>playSeq([[N.C5,.09],[N.E5,.09],[N.G5,.09],[N.C6,.18]],"triangle",0.08);   // 出発ファンファーレ
+const sfxOk    =()=>playSeq([[N.G5,.06],[N.C6,.06],[N.E6,.12]],"square",0.07);                // 正解キラン（基本）
+/* コンボ数に応じて正解音を段階的に豪華に（初めはシンプル→連続でカッコよく） */
+const C7=2093,E7=2637,G7=3136;
+function sfxCombo(streak){
+  const s=streak||1;
+  if(s<=2){                    // 1〜2：シンプルなピコッ
+    playSeq([[N.C6,.05],[N.E6,.10]],"square",0.06);
+  }else if(s<=4){              // 3〜4：三音アルペジオ
+    playSeq([[N.G5,.05],[N.C6,.05],[N.E6,.13]],"square",0.07);
+  }else if(s<=6){              // 5〜6：上昇＋きらめき
+    playSeq([[N.C6,.05],[N.E6,.05],[N.G6,.14]],"square",0.075);
+    playSeq([[0,.10],[E7,.10]],"triangle",0.05);
+  }else if(s<=9){              // 7〜9：ファンファーレ風
+    playSeq([[N.E6,.05],[N.G6,.05],[C7,.05],[E7,.16]],"square",0.08);
+    playSeq([[0,.05],[N.C6,.05],[N.G6,.05],[C7,.16]],"triangle",0.05);
+  }else{                        // 10連以上：最大級のキメ
+    playSeq([[N.C6,.05],[N.E6,.05],[N.G6,.05],[C7,.05],[E7,.06],[G7,.20]],"square",0.085);
+    playSeq([[0,.05],[N.G5,.05],[N.C6,.05],[N.E6,.05],[N.G6,.22]],"triangle",0.06);
+  }
+}
+const sfxNg    =()=>playSeq([[N.E4,.10],[N.B3,.18]],"sawtooth",0.06);                         // 不正解ブブー
+const sfxClick =()=>playSeq([[N.A4,.04]],"square",0.05);
+const sfxWin   =()=>playSeq([[N.C5,.1],[N.E5,.1],[N.G5,.1],[N.C6,.1],[N.G5,.1],[N.C6,.28]],"triangle",0.08); // 勝利
+const sfxRecord=()=>playSeq([[N.C6,.08],[N.E6,.08],[N.G6,.14],[N.E6,.08],[N.G6,.22]],"square",0.07);         // 新記録
+
+/* ---------- 発音（Web Speech・任意/オフライン優先） ---------- */
+const canSpeak = ("speechSynthesis" in window);
+function speak(text){
+  if(!canSpeak) return;
+  try{ const u=new SpeechSynthesisUtterance(text.replace(/,/g,"")); u.lang="en-US"; u.rate=0.9; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch(e){}
+}
+
+/* ---------- 画面 ---------- */
+function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active")); document.getElementById(id).classList.add("active"); window.scrollTo(0,0); }
+
+/* ---------- ネット ---------- */
+function online(){ return navigator.onLine && RANKING_ENDPOINT; }
+window.addEventListener("online",flushPending);
+
+/* ---------- ランキング通信（GAS Web App） ---------- */
+async function postScore(rec){ if(!online()) throw new Error("offline"); const res=await fetch(RANKING_ENDPOINT,{method:"POST",body:JSON.stringify({action:"add",rec})}); return await res.json(); }
+async function fetchTop(n=20){ if(!online()) throw new Error("offline"); const res=await fetch(RANKING_ENDPOINT+"?action=top&n="+n); return await res.json(); }
+async function flushPending(){ if(!online()) return; let a=LS.getPending(); if(!a.length) return; const keep=[]; for(const rec of a){ try{ await postScore(rec); }catch(e){ keep.push(rec); } } LS.setPending(keep); }
+
+/* ---------- ホーム（名前ボタン） ---------- */
+(function buildNames(){
+  const box=document.getElementById("nameButtons");
+  PLAYERS.forEach(p=>{ const b=document.createElement("button"); b.className="namebtn"; b.textContent=p; b.onclick=()=>startQuest(p); box.appendChild(b); });
+})();
+document.getElementById("btnRank").onclick=openRank;
+document.getElementById("btnTrivia").onclick=openTrivia;
+
+/* ---------- クエスト ---------- */
+function startQuest(name){
+  player=name;
+  state={ i:0, level:1, score:0, streak:0, maxStreak:0, correct:0, used:new Set(), stepCorrect:0, q:null, answered:false };
+  sfxStart(); show("scQuiz"); nextQuestion();
+}
+function pickItem(level,used){
+  const tryLevels=[level, level+1, level-1, level+2, level-2];
+  for(const L of tryLevels){ const cand=DATA.filter(d=>d.lv===L && !used.has(d.s)); if(cand.length) return cand[Math.floor(Math.random()*cand.length)]; }
+  const any=DATA.filter(d=>!used.has(d.s)); return any.length? any[Math.floor(Math.random()*any.length)] : DATA[0];
+}
+/* 選択肢：まず近い誤答(d)、足りなければ同カテゴリ→他カテゴリで補完 */
+function buildChoices(item,n){
+  const set=new Set([item.m]);
+  (item.d||[]).forEach(x=>{ if(set.size<n && x!==item.m) set.add(x); });
+  const sameCat=DATA.filter(d=>d.cat===item.cat && d.m!==item.m);
+  const others=DATA.filter(d=>d.cat!==item.cat && d.m!==item.m);
+  const draw=(arr)=>{ arr.sort(()=>Math.random()-0.5); for(const d of arr){ if(set.size>=n)break; set.add(d.m);} };
+  draw(sameCat); draw(others);
+  const list=[...set].slice(0,n); list.sort(()=>Math.random()-0.5); return list;
+}
+const CAT_LABEL={geo:"地形",spot:"名所",hist:"歴史",nat:"自然"};
+function renderSentence(item){
+  const cat=document.getElementById("qCat");
+  cat.textContent=CAT_LABEL[item.cat]||"問題";
+  cat.className="qcat "+item.cat;
+  document.getElementById("qSentence").innerHTML=item.s.replace(/\*([^*]+)\*/,'<u class="tgt">$1</u>');
+  document.getElementById("qKana").textContent="【"+item.t+"】"+item.kana;
+  document.getElementById("btnSpeak").style.display=canSpeak?"inline":"none";
+}
+function nextQuestion(){
+  const st=state;
+  if(st.i>=20){ finish(); return; }
+  st.answered=false;
+  const item=pickItem(st.level,st.used); st.used.add(item.s); st.q=item;
+  document.getElementById("qNo").textContent=st.i+1;
+  document.getElementById("qBar").style.width=((st.i)/20*100)+"%";
+  document.getElementById("curScore").textContent=st.score;
+  document.getElementById("curStreak").textContent=st.streak;
+  renderSentence(item);
+  const n=CHOICE_BY_LV[st.level]||6;
+  const box=document.getElementById("choices"); box.innerHTML="";
+  document.getElementById("afterWin").style.display="none";
+  document.getElementById("qWin").style.opacity="1";
+  buildChoices(item,n).forEach(m=>{ const b=document.createElement("button"); b.className="choice"; b.textContent=m; b.onclick=()=>answer(b,m,item); box.appendChild(b); });
+}
+function answer(btn,chosen,item){
+  const st=state; if(st.answered) return; st.answered=true;
+  const ok=(chosen===item.m);
+  document.querySelectorAll("#choices .choice").forEach(b=>{
+    b.onclick=null;
+    if(b.textContent===item.m){ b.classList.add("correct"); const m=document.createElement("span");m.className="mk";m.textContent="◯";b.appendChild(m);}
+    else if(b===btn){ b.classList.add("wrong"); const m=document.createElement("span");m.className="mk";m.textContent="✕";b.appendChild(m);}
+  });
+  if(ok){ st.correct++; st.stepCorrect++; st.streak++; st.maxStreak=Math.max(st.maxStreak,st.streak);
+    st.score+=st.level*100+Math.min(st.streak,5)*20; sfxCombo(st.streak); flashJudge(true);
+  }else{ st.streak=0; sfxNg(); flashJudge(false); }
+  document.getElementById("curScore").textContent=st.score;
+  document.getElementById("curStreak").textContent=st.streak;
+  const ex=document.getElementById("explain");
+  ex.innerHTML='<span class="m">'+item.t+'</span> ＝ '+item.m+'<div class="note">'+(item.note?("💡 "+item.note+"　"):"")+'発音: '+item.kana+'</div>';
+  document.getElementById("afterWin").style.display="block";
+  document.getElementById("qWin").style.opacity="0.85";
+  document.getElementById("afterWin").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function flashJudge(ok){ const j=document.getElementById("judge"),s=document.getElementById("judgeSym"); s.textContent=ok?"◯":"✕"; s.className="sym "+(ok?"ok":"ng"); j.classList.add("show"); setTimeout(()=>j.classList.remove("show"),650); }
+document.getElementById("btnSpeak").onclick=()=>{ if(state&&state.q) speak(state.q.t); };
+document.getElementById("btnNext").onclick=()=>{
+  const st=state; sfxClick(); st.i++;
+  // ステップ境界(5問ごと)で難易度を静かに見直す。最終ステップ後は評価不要
+  if(st.i % STEP_SIZE === 0 && st.i < TOTAL_Q){
+    const acc = st.stepCorrect / STEP_SIZE;
+    if(acc >= ADVANCE_ACC) st.level = Math.min(3, st.level + 1); // 高→レベルアップ（上限3）
+    // 低→現状維持（下げない）
+    st.stepCorrect = 0;
+  }
+  nextQuestion();
+};
+
+/* ---------- 結果 ---------- */
+function finish(){
+  const st=state;
+  document.getElementById("qBar").style.width="100%";
+  const acc=Math.round(st.correct/20*100);
+  const info=titleInfo(st.score);
+  const title=info.cur.t;
+  document.getElementById("resWho").textContent=player+" の けっか";
+  document.getElementById("resScore").textContent=st.score;
+  const posLine = "ランク "+(info.idx+1)+" / "+info.total
+      + (info.next ? ("　次「"+info.next.t+"」まで あと"+info.toNext+"てん") : "　★最高ランク到達★");
+  document.getElementById("resTitle").innerHTML=title+"<small>"+posLine+"</small>";
+  renderLadder(info.idx);
+  document.getElementById("resCorrect").textContent=st.correct+" / 20";
+  document.getElementById("resAcc").textContent=acc+"%";
+  document.getElementById("resStreak").textContent=st.maxStreak;
+  const prevBest=LS.getBest(player);
+  const isRecord=st.score>prevBest;
+  const best=Math.max(prevBest,st.score); LS.setBest(player,best);
+  document.getElementById("resBest").textContent=best+(isRecord?"（新記録！）":"");
+  if(isRecord) sfxRecord(); else sfxWin();
+  const rec={player:player,score:st.score,title:title,correct:st.correct,total:20,accuracy:acc,level:st.level,ts:new Date().toISOString(),date:new Date().toLocaleDateString("ja-JP")};
+  syncScore(rec); show("scResult");
+}
+async function syncScore(rec){
+  const msg=document.getElementById("syncMsg");
+  if(!navigator.onLine){ pushPending(rec); msg.innerHTML="📴 圏外のため 端末に保存。接続時にランキング反映（トップ5保持）"; return; }
+  if(!RANKING_ENDPOINT){ msg.innerHTML="ℹ️ ランキング未設定（端末内ベストのみ記録）"; return; }
+  msg.textContent="ランキングに 反映ちゅう…";
+  try{ await postScore(rec); await flushPending(); msg.innerHTML="✅ ランキングに 反映した！"; }
+  catch(e){ pushPending(rec); msg.innerHTML="⚠️ 反映失敗。端末に保存し 次回接続時に再送（トップ5保持）"; }
+}
+document.getElementById("btnAgain").onclick=()=>startQuest(player);
+document.getElementById("btnToHome").onclick=()=>{ sfxClick(); show("scHome"); };
+document.getElementById("btnToRank").onclick=openRank;
+document.getElementById("btnRankRefresh").onclick=openRank;
+document.getElementById("btnRankBack").onclick=()=>{ sfxClick(); show("scHome"); };
+
+/* ---------- ランキング ---------- */
+async function openRank(){
+  sfxClick(); show("scRank");
+  const list=document.getElementById("rankList"), net=document.getElementById("rankNet");
+  list.innerHTML="<p class='center small'>よみこみ中…</p>";
+  if(navigator.onLine && RANKING_ENDPOINT){
+    try{ await flushPending(); const data=await fetchTop(20); const rows=(data&&data.top)?data.top:[];
+      net.innerHTML="<span class='online on'></span>オンライン・最新ランキング"; renderRank(rows,true); return; }catch(e){}
+  }
+  net.innerHTML="<span class='online'></span>オフライン表示（端末内の記録／未送信分）";
+  const local=[]; PLAYERS.forEach(p=>{ const b=LS.getBest(p); if(b>0) local.push({player:p,score:b,title:titleFor(b)}); });
+  LS.getPending().forEach(r=>local.push({player:r.player,score:r.score,title:r.title,pending:true}));
+  local.sort((a,b)=>b.score-a.score); renderRank(local,false);
+}
+function renderRank(rows,dedup){
+  const list=document.getElementById("rankList");
+  if(!rows.length){ list.innerHTML="<p class='center small'>まだ 記録が ないぞ。クエストに でよう！</p>"; return; }
+  if(dedup){ const best={}; rows.forEach(r=>{ if(!best[r.player]||r.score>best[r.player].score) best[r.player]=r; }); rows=Object.values(best).sort((a,b)=>b.score-a.score); }
+  list.innerHTML="";
+  rows.forEach((r,idx)=>{ const div=document.createElement("div"); div.className="rankrow"+(r.player===player?" me":"");
+    const medal=["👑","🥈","🥉"][idx];
+    div.innerHTML='<div class="no">'+(medal||(idx+1))+'</div><div style="flex:1"><div class="nm">'+r.player+(r.pending?" ⏳":"")+'</div><div class="tt">'+(r.title||"")+'</div></div><div class="sc">'+r.score+'</div>';
+    list.appendChild(div); });
+}
+
+/* ---------- 豆知識 ---------- */
+function openTrivia(){
+  sfxClick(); show("scTrivia");
+  const box=document.getElementById("triviaList");
+  box.innerHTML=TRIVIA.map(t=>'<div class="trivia-card">◆ '+t+'</div>').join("");
+}
+document.getElementById("btnTriviaBack").onclick=()=>{ sfxClick(); show("scHome"); };
+
+/* ---------- 星 ---------- */
+(function stars(){ const box=document.getElementById("stars"); let h=""; for(let i=0;i<40;i++){ const x=Math.random()*100,y=Math.random()*60,s=Math.random()*2+1; h+='<span style="position:absolute;left:'+x+'%;top:'+y+'%;width:'+s+'px;height:'+s+'px;background:#fff;border-radius:50%;opacity:'+(Math.random()*0.7+0.3)+'"></span>'; } box.innerHTML=h; })();
+
+/* ---------- 初期化 ---------- */
+flushPending();
+</script>
+</body>
+</html>
