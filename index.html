@@ -139,6 +139,10 @@ h1.title{text-align:center;font-size:30px;line-height:1.25;margin:22px 0 4px;col
 .small{font-size:12px;color:#9db4ff;}
 .footer{text-align:center;font-size:11px;color:#5f77c0;margin-top:14px;}
 .footer .ver{display:block;margin-top:2px;font-size:9px;color:#41528f;letter-spacing:.5px;}
+.endlessBadge{text-align:center;margin:6px auto 2px;font-size:12px;font-weight:bold;color:#ffd76a;letter-spacing:1px;padding:4px 8px;border:2px solid #ff5a5a;border-radius:8px;background:rgba(90,0,0,.35);animation:endlessPulse 1s infinite;}
+@keyframes endlessPulse{0%,100%{box-shadow:0 0 4px #ff5a5a;}50%{box-shadow:0 0 14px #ffd76a;}}
+.secretTitle{margin:10px 2px 2px;font-size:17px;font-weight:bold;color:#fff2b0;letter-spacing:.5px;text-shadow:0 0 6px #ffcf3f,0 0 12px #ff8a3f;line-height:1.5;animation:secretGlow 1.4s ease-in-out infinite;}
+@keyframes secretGlow{0%,100%{filter:brightness(1);}50%{filter:brightness(1.35);}}
 </style>
 </head>
 <body>
@@ -162,13 +166,14 @@ h1.title{text-align:center;font-size:30px;line-height:1.25;margin:22px 0 4px;col
       <button class="imgbtn" id="btnRank"><img src="btn-rank.png" alt="ランキングをみる"></button>
       <button class="imgbtn" id="btnTrivia"><img src="btn-trivia.png" alt="ヨセミテ豆知識"></button>
     </div>
-    <p class="footer">© Yosemite Quest<span class="ver">Ver 2026.07.19-8</span></p>
+    <p class="footer">© Yosemite Quest<span class="ver">Ver 2026.07.19-9</span></p>
   </section>
 
   <!-- ===== クイズ ===== -->
   <section id="scQuiz" class="screen">
-    <div class="hud"><span>もんだい <b id="qNo">1</b>/20</span><span>スコア <b id="curScore">0</b></span><span>れんぞく <b id="curStreak">0</b></span></div>
+    <div class="hud"><span>もんだい <b id="qNo">1</b>/<b id="qTot">20</b></span><span>スコア <b id="curScore">0</b></span><span>れんぞく <b id="curStreak">0</b></span></div>
     <div class="bar"><i id="qBar"></i></div>
+    <div id="endlessBadge" class="endlessBadge" style="display:none">★ ENDLESS ★ ─ まちがえたら しゅうりょう</div>
     <div class="win" id="qWin">
       <div><span class="qcat" id="qCat"></span></div>
       <p class="qsentence" id="qSentence"></p>
@@ -187,6 +192,7 @@ h1.title{text-align:center;font-size:30px;line-height:1.25;margin:22px 0 4px;col
       <p style="font-size:15px;margin:2px" id="resWho">クエスト かんりょう！</p>
       <p class="big" id="resScore">0</p>
       <p class="rankTitle" id="resTitle"></p>
+      <p class="secretTitle" id="resSecret" style="display:none"></p>
     </div>
     <div class="win">
       <div class="stat"><span>せいとうすう</span><b id="resCorrect">0 / 20</b></div>
@@ -283,6 +289,13 @@ const TITLES = [
  {min:5500, t:"ヨセミテの かしこき ゆうしゃ"}
 ];
 function titleFor(score){ let t=TITLES[0].t; for(const x of TITLES){ if(score>=x.min) t=x.t; } return t; }
+/* 裏称号：20問ノーミス→エンドレス突入で「正解数」に応じて解放（通常ラダーには載らない秘密ランク） */
+const SECRET_TITLES = [
+ {min:21, t:"覚醒者 ─ AWAKENED RANGER"},
+ {min:26, t:"花崗岩の支配者 ─ GRANITE SOVEREIGN"},
+ {min:31, t:"ヨセミテ無双 ─ IMMORTAL LEGEND ∞"}
+];
+function secretTitleFor(correct){ let t=null; for(const x of SECRET_TITLES){ if((correct||0)>=x.min) t=x.t; } return t; }
 /* 称号の全体位置づけ（現在ランク／次の称号まで） */
 function titleInfo(score){
   let idx=0; for(let i=0;i<TITLES.length;i++){ if(score>=TITLES[i].min) idx=i; }
@@ -524,11 +537,15 @@ function renderSentence(item){
 }
 function nextQuestion(){
   const st=state;
-  if(st.i>=20){ finish(); return; }
+  // 20問クリア後：全問正解(ノーミス)なら間違えるまで続行（エンドレス）。1問でもミスがあれば終了
+  if(st.i>=TOTAL_Q && st.correct!==st.i){ finish(); return; }
   st.answered=false;
+  const endless = st.i>=TOTAL_Q;
   const item=pickItem(st.level,st.used); st.used.add(item.s); st.q=item;
   document.getElementById("qNo").textContent=st.i+1;
-  document.getElementById("qBar").style.width=((st.i)/20*100)+"%";
+  document.getElementById("qTot").textContent=endless?"∞":TOTAL_Q;
+  document.getElementById("endlessBadge").style.display=endless?"block":"none";
+  document.getElementById("qBar").style.width=Math.min(100,(st.i)/TOTAL_Q*100)+"%";
   document.getElementById("curScore").textContent=st.score;
   document.getElementById("curStreak").textContent=st.streak;
   renderSentence(item);
@@ -579,20 +596,25 @@ let pendingRec=null;   // 名前入力待ちのレコード
 function finish(){
   const st=state;
   document.getElementById("qBar").style.width="100%";
-  const acc=Math.round(st.correct/20*100);
+  const total=st.i||20;                          // 実際に挑戦した問題数（エンドレス対応）
+  const acc=Math.round(st.correct/total*100);
   const info=titleInfo(st.score);
-  const title=info.cur.t;
-  document.getElementById("resWho").textContent="クエスト かんりょう！";
+  const secret=secretTitleFor(st.correct);       // 21問以上正解＝裏称号
+  const title=secret? secret : info.cur.t;        // 裏称号があればランキングにも優先表示
+  document.getElementById("resWho").textContent = secret? "★ でんせつ たっせい！ ★" : "クエスト かんりょう！";
   document.getElementById("resScore").textContent=st.score;
   renderResultTitle(localMaxScore());  // 記録済みの称号だけ表示（未到達は伏せる）
-  document.getElementById("resCorrect").textContent=st.correct+" / 20";
+  const secEl=document.getElementById("resSecret");
+  if(secret){ secEl.textContent="🏆 裏称号  "+secret; secEl.style.display="block"; }
+  else{ secEl.style.display="none"; }
+  document.getElementById("resCorrect").textContent=st.correct+" / "+total;
   document.getElementById("resAcc").textContent=acc+"%";
   document.getElementById("resStreak").textContent=st.maxStreak;
   const prevBest=localMaxScore();               // 端末の過去最高（この回はまだ未記録）
   const isRecord=st.score>prevBest;
   document.getElementById("resBest").textContent=Math.max(prevBest,st.score)+(isRecord?"（新記録！）":"");
   if(isRecord) sfxRecord(); else sfxWin();
-  const rec={player:null,score:st.score,title:title,correct:st.correct,total:20,accuracy:acc,level:st.level,ts:new Date().toISOString(),date:new Date().toLocaleDateString("ja-JP")};
+  const rec={player:null,score:st.score,title:title,correct:st.correct,total:total,accuracy:acc,level:st.level,ts:new Date().toISOString(),date:new Date().toLocaleDateString("ja-JP")};
   const msg=document.getElementById("syncMsg"); if(msg) msg.textContent="";
   show("scResult");
   maybeNameEntry(rec, st.score);                // Top20資格ありなら名前入力→記録
