@@ -357,7 +357,7 @@ function unlockAudio(){ const c=ac(); if(c && c.state==="suspended") c.resume().
 ["pointerdown","touchend","click"].forEach(function(ev){ window.addEventListener(ev, unlockAudio, {once:true}); });
 
 /* ---------- BGM：スコア帯で3ステージ切替（出発→成長→決戦） ---------- */
-const BGM_VOL=0.13;  /* 音量控えめ（注意して小さめ） */
+const BGM_VOL=0.07;  /* 効果音を優先して控えめに */
 const BGM_TRACKS=[
   {min:0,    src:"yosemite_quest_stage1_departure_48kbps.mp3"},   // 低スコア：出発
   {min:1700, src:"yosemite_quest_stage2_growth_48kbps.mp3"},      // 中スコア：成長
@@ -375,6 +375,16 @@ function bgmForScore(score){
   if(idx!==bgmCur){ BGMS.forEach(function(a,i){ if(i!==idx){ try{ a.pause(); }catch(e){} } }); bgmCur=idx; }
   try{ const p=BGMS[idx].play(); if(p&&p.catch) p.catch(function(){}); }catch(e){}
 }
+/* 効果音を聞かせるため、再生中BGMを一時的に絞る（回答時など） */
+function duckBgm(ms){
+  if(!BGMS || bgmCur<0) return;
+  const a=BGMS[bgmCur]; if(!a) return;
+  try{
+    a.volume=Math.max(0, BGM_VOL*0.22);
+    clearTimeout(a._duckT);
+    a._duckT=setTimeout(function(){ try{ a.volume=BGM_VOL; }catch(e){} }, ms||600);
+  }catch(e){}
+}
 function bgmToggle(){
   const off = localStorage.getItem("yq_bgm")==="off";
   if(off){ localStorage.setItem("yq_bgm","on"); if(typeof state!=="undefined" && state) bgmForScore(state.score); }
@@ -383,7 +393,7 @@ function bgmToggle(){
 }
 function syncBgmBtn(){ const b=document.getElementById("bgmBtn"); if(b) b.classList.toggle("off", localStorage.getItem("yq_bgm")==="off"); }
 /* 音列を鳴らす：notes=[[freq,dur],...] */
-const SFX_VOL=0.32;  /* 効果音のマスター音量（小さめ。全sfxに掛かる） */
+const SFX_VOL=0.85;  /* 効果音のマスター音量（BGMより前に出す。全sfxに掛かる） */
 function playSeq(notes,type="square",gain=0.07){
   const c=ac(); if(!c) return; let t=c.currentTime;
   notes.forEach(([f,dur])=>{
@@ -514,6 +524,7 @@ function answer(btn,chosen,item){
   document.getElementById("curScore").textContent=st.score;
   document.getElementById("curStreak").textContent=st.streak;
   bgmForScore(st.score);  // スコア帯に応じてBGMを切替（出発→成長→決戦）
+  duckBgm(650);           // 回答の効果音が埋もれないようBGMを一時的に絞る
   const ex=document.getElementById("explain");
   ex.innerHTML='<span class="m">'+item.t+'</span> ＝ '+item.m+'<div class="note">'+(item.note?("💡 "+item.note+"　"):"")+'発音: '+item.kana+'</div>';
   document.getElementById("afterWin").style.display="block";
