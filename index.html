@@ -357,7 +357,7 @@ function unlockAudio(){ const c=ac(); if(c && c.state==="suspended") c.resume().
 ["pointerdown","touchend","click"].forEach(function(ev){ window.addEventListener(ev, unlockAudio, {once:true}); });
 
 /* ---------- BGM：スコア帯で3ステージ切替（出発→成長→決戦） ---------- */
-const BGM_VOL=0.07;  /* 効果音を優先して控えめに */
+const BGM_VOL=0.007;  /* 効果音を最優先。BGMはごく小さく（従来の約1/10） */
 const BGM_TRACKS=[
   {min:0,    src:"yosemite_quest_stage1_departure_48kbps.mp3"},   // 低スコア：出発
   {min:1700, src:"yosemite_quest_stage2_growth_48kbps.mp3"},      // 中スコア：成長
@@ -393,7 +393,7 @@ function bgmToggle(){
 }
 function syncBgmBtn(){ const b=document.getElementById("bgmBtn"); if(b) b.classList.toggle("off", localStorage.getItem("yq_bgm")==="off"); }
 /* 音列を鳴らす：notes=[[freq,dur],...] */
-const SFX_VOL=0.85;  /* 効果音のマスター音量（BGMより前に出す。全sfxに掛かる） */
+const SFX_VOL=1.0;  /* 効果音のマスター音量（BGMより前に出す。全sfxに掛かる） */
 function playSeq(notes,type="square",gain=0.07){
   const c=ac(); if(!c) return; let t=c.currentTime;
   notes.forEach(([f,dur])=>{
