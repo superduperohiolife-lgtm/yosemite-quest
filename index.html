@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a1a4f">
 <title>Yosemite Quest</title>
-<link rel="icon" type="image/png" href="yosemite-quest-icon-512.png">
-<link rel="apple-touch-icon" href="yosemite-quest-icon-512.png">
+<link rel="icon" type="image/png" href="yosemite-quest-icon-180.png">
+<link rel="apple-touch-icon" href="yosemite-quest-icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
@@ -82,7 +82,7 @@ h1.title{text-align:center;font-size:30px;line-height:1.25;margin:22px 0 4px;col
 #nameEntry .box{background:var(--win);border:4px solid var(--gold);border-radius:12px;box-shadow:0 0 0 4px var(--shadow),0 10px 0 var(--shadow);padding:20px 18px;max-width:360px;width:100%;text-align:center;}
 #nameEntry h3{color:var(--gold);margin:2px 0 4px;font-size:20px;text-shadow:2px 2px 0 var(--shadow);}
 #nameEntry p{color:#cfe0ff;font-size:13px;margin:2px 0 12px;}
-#nameInput{width:100%;box-sizing:border-box;font:inherit;font-size:24px;text-align:center;letter-spacing:3px;color:var(--gold);background:#04102e;border:3px solid var(--ink);border-radius:8px;padding:12px 8px;text-transform:none;}
+#nameInput{width:100%;box-sizing:border-box;font:inherit;font-size:24px;text-align:center;letter-spacing:6px;color:var(--gold);background:#04102e;border:3px solid var(--ink);border-radius:8px;padding:12px 8px;text-transform:uppercase;}
 #nameEntry .ok{margin-top:14px;}
 .hud{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:#eaf1ff;padding:2px 4px;text-shadow:1px 1px 2px #04102e,0 0 4px rgba(4,16,46,.8);}
 .hud b{color:var(--gold);}
@@ -142,8 +142,8 @@ h1.title{text-align:center;font-size:30px;line-height:1.25;margin:22px 0 4px;col
 <div id="judge"><div class="sym" id="judgeSym"></div></div>
 <div id="nameEntry"><div class="box">
   <h3>★ ランキング入り！ ★</h3>
-  <p>なまえを いれて とうろく（10文字まで）</p>
-  <input id="nameInput" maxlength="10" autocomplete="off" placeholder="なまえ">
+  <p>なまえを いれて とうろく（英字A-Z・10文字まで）</p>
+  <input id="nameInput" maxlength="10" autocomplete="off" autocapitalize="characters" inputmode="latin" spellcheck="false" placeholder="AAA">
   <button class="cmd ok" id="nameOk">＊ とうろく</button>
 </div></div>
 
@@ -573,15 +573,15 @@ async function maybeNameEntry(rec, score){
 function openNameEntry(rec){
   pendingRec=rec;
   const inp=document.getElementById("nameInput");
-  inp.value = localStorage.getItem("yq_name") || "";
+  inp.value = (localStorage.getItem("yq_name") || "").toUpperCase().replace(/[^A-Z]/g,"").slice(0,10);
   document.getElementById("nameEntry").classList.add("show");
   setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 60);
 }
 function closeNameEntry(){ document.getElementById("nameEntry").classList.remove("show"); }
 function submitName(){
   if(!pendingRec){ closeNameEntry(); return; }
-  let nm=(document.getElementById("nameInput").value||"").replace(/[<>&"']/g,"").trim().slice(0,10);
-  if(!nm) nm="ゲスト";
+  let nm=(document.getElementById("nameInput").value||"").toUpperCase().replace(/[^A-Z]/g,"").slice(0,10);
+  if(!nm) nm="AAA";
   localStorage.setItem("yq_name", nm);
   player=nm; pendingRec.player=nm;
   document.getElementById("resWho").textContent=nm+" の きろく！";
@@ -590,6 +590,7 @@ function submitName(){
   pendingRec=null; closeNameEntry();
 }
 document.getElementById("nameOk").onclick=submitName;
+document.getElementById("nameInput").addEventListener("input",function(e){ e.target.value=e.target.value.toUpperCase().replace(/[^A-Z]/g,"").slice(0,10); });
 document.getElementById("nameInput").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); submitName(); } });
 async function syncScore(rec){
   const msg=document.getElementById("syncMsg");
